@@ -283,7 +283,7 @@
 //   <o8> DMA Channel <0-7>
 //   <o9> Handshake Channel <0-7>
 //  </e>
-#define RTE_SPI3 1
+#define RTE_SPI3 0
 #if RTE_SPI3
 #define RTE_SPIM3_CS_N_ID 2
 #define RTE_SPIM3_CLK_ID 2
@@ -473,7 +473,7 @@
 // <i> Configuration settings for Driver_UART2 in component ::Drivers:UART
 //  <o1> UA2_RXD pin <1=>MCU_UA2_RXD
 //  <o2> UA2_TXD pin <1=>MCU_UA2_TXD
-#define RTE_UART2 0
+#define RTE_UART2 1
 #if RTE_UART2
 #define RTE_UA2_RXD_ID 1
 #define RTE_UA2_TXD_ID 1
@@ -485,7 +485,7 @@
 //   <o1> UA2_RTS_N pin <1=>MCU_UA2_RTS_N
 //   <o2> UA2_CTS_N pin <1=>MCU_UA2_CTS_N
 //  </e>
-#define RTE_UART2_HW_FLOW 0
+#define RTE_UART2_HW_FLOW 1
 #if RTE_UART2 && RTE_UART2_HW_FLOW
 #define RTE_UA2_RTS_N_ID 1
 #define RTE_UA2_CTS_N_ID 1
@@ -670,7 +670,7 @@
 // </e>
 
 // <e> RTC (Real Time Clock)
-#define RTE_RTC 0
+#define RTE_RTC 1
 // </e>
 
 // <e> WDT (Watch Dog Timer)
@@ -682,7 +682,7 @@
 // </e>
 
 // <e> RNG (Random Number Generator)
-#define RTE_RNG 0
+#define RTE_RNG 1
 // </e>
 
 // <e> NOR (internal flash)

@@ -88,7 +88,7 @@ extern "C" {
 //     <0=> Connectable advertising
 //     <2=> Scannable advertising
 //     <3=> Non connectable advertising
-#define BLELIB_ADVERTISING_TYPE_NUM (0)
+#define BLELIB_ADVERTISING_TYPE_NUM (3)
 #if BLELIB_ADVERTISING_TYPE_NUM == 0
 #define BLELIB_ADVERTISING_TYPE TWIC_ADV_TYPE_IND
 #elif BLELIB_ADVERTISING_TYPE_NUM == 2

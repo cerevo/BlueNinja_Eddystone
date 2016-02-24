@@ -25,7 +25,7 @@ LIBS    =
 
 #Include dir, Source files.
 INCLUDE = -IRTE -IRTE/Device/TZ1001MBG
-SOURCES = src/main.c
+SOURCES = src/main.c src/ble.c
 include *.mk
 
 #Objects
