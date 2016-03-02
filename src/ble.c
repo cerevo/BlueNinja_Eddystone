@@ -100,8 +100,8 @@ uint8_t bnmsg_advertising_data[] = {
     0xAA, /* Eddystone service FEAA */
     0xFE,
     
-#if 1
-    0x18, /* length of this data */
+#if 0
+    0x17, /* length of this data */
     0x16, /* AD type = Service Data type value */
     0xAA, /* Eddystone service FEAA */
     0xFE,
@@ -113,15 +113,15 @@ uint8_t bnmsg_advertising_data[] = {
     0x00, /* Reserved */
     0x00, /* Reserved */
 #else
-    0x13, /* length of this data */
+    0x14, /* length of this data */
     0x16, /* AD type = Service Data type value */
     0xAA, /* Eddystone service FEAA */
     0xFE,
     /* Eddystone-URL(https://github.com/google/eddystone/tree/master/eddystone-url) */
     0x10, /* Frame Type: URL */
     0xE7, /* Ranging Data */
-    0x02, /* URL Scheme: http:// */
-    'g', 'o', 'o', '.', 'g', 'l', '/', '2', 'u', '2', 'F', 'N', 'Y',
+    0x03, /* URL Scheme: https:// */
+    'b', 'n', 'i', 'n', 'j', 'a', '.', 'c', 'e', 'r', 'e', 'v', 'o', 0x07,
 #endif
 };
 
@@ -209,6 +209,7 @@ static bool is_adv = false;
 static bool is_reg = false;
 static uint8_t led_blink = 0;
 static uint8_t cnt = 0;
+extern twicConnIface_t* BLELib_Internal_ConnIface(void);
 
 int BLE_main(void)
 {
@@ -253,6 +254,10 @@ int BLE_main(void)
                 if (ret == BLELIB_OK) {
                     is_adv = true;
                     cnt = 0;
+                }
+                
+                if (twicIfLeCeLowPowerMode(BLELib_Internal_ConnIface(), true, true, false, false) != TWIC_STATUS_OK) {
+                    TZ01_console_puts("twicIfLeCeLowPowerMode() failed.\r\n");
                 }
             }
             break;
