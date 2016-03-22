@@ -2,8 +2,8 @@ INCLUDE+=-IRTE
 INCLUDE+=-IRTE/Device/TZ1001MBG
 
 ## Middleware
-SOURCES+=RTE/Middleware/TZ1001MBG/twic_button.c
-SOURCES+=RTE/Middleware/TZ1001MBG/twic_led.c
+#SOURCES+=RTE/Middleware/TZ1001MBG/twic_button.c
+#SOURCES+=RTE/Middleware/TZ1001MBG/twic_led.c
 SOURCES+=RTE/Middleware/TZ1001MBG/twic_util_advertise.c
 SOURCES+=RTE/Middleware/TZ1001MBG/twic_util_ancs.c
 SOURCES+=RTE/Middleware/TZ1001MBG/twic_util_hrp.c

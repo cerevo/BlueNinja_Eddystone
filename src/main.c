@@ -28,6 +28,7 @@ limitations under the License.
 #include "TZ10xx.h"
 #include "PMU_TZ10xx.h"
 #include "GPIO_TZ10xx.h"
+#include "SPI_TZ10xx.h"
 
 #include "TZ01_system.h"
 #include "TZ01_console.h"
@@ -36,6 +37,9 @@ limitations under the License.
 #include "ble.h"
 
 extern TZ10XX_DRIVER_GPIO Driver_GPIO;
+extern TZ10XX_DRIVER_SPI Driver_SPI3;
+
+extern bool MPU9250_drv_sleep(TZ10XX_DRIVER_SPI *spi_drv);
 
 static void power_on(void)
 {
@@ -80,19 +84,30 @@ int main(void)
     init();
     TZ01_system_init();
     TZ01_console_init();
+    
+    if (!MPU9250_drv_sleep(&Driver_SPI3)) {
+        TZ01_console_puts("MPU9250_drv_sleep() failed.\r\n");
+    }
 
     for (;;) {
         TZ01_system_run();
         if (check_uvd()) {
+            /* 電圧低下検出 */
             Driver_GPIO.WritePin(10, 1);
+            if (BLE_main(true) != 0) {
+                /* 定電圧検出から10秒経った */
+                break;
+            }
         } else {
+            /* 通常動作 */
             Driver_GPIO.WritePin(10, 0);
+            BLE_main(false);
         }
-        BLE_main();
     }
 term:
     BLE_stop();
 
     TZ01_console_puts("Program terminated.\r\n");
+    power_off();
     return 0;
 }

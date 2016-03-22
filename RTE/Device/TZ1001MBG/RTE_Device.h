@@ -283,7 +283,7 @@
 //   <o8> DMA Channel <0-7>
 //   <o9> Handshake Channel <0-7>
 //  </e>
-#define RTE_SPI3 0
+#define RTE_SPI3 1
 #if RTE_SPI3
 #define RTE_SPIM3_CS_N_ID 2
 #define RTE_SPIM3_CLK_ID 2

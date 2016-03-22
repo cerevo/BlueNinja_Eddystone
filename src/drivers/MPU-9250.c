@@ -99,6 +99,49 @@ static bool mpu9250_drv_i2c_slv0_read_request(uint8_t slv_addr, uint8_t slv_reg,
 
 /*  API FUNCTIONS  */
 
+bool MPU9250_drv_sleep(TZ10XX_DRIVER_SPI *spi_drv)
+{
+    uint8_t val = 0x00;
+    if (spi_drv == NULL) {
+        return false;
+    }
+
+    tz10xx_drv_spi = spi_drv;
+    tz10xx_drv_spi->Initialize(NULL);
+    /* SPI Mode0, MSB to LSB */
+    tz10xx_drv_spi->Configure(ARM_SPI_CPOL0_CPHA0, ARM_SPI_MSB_LSB);
+    /* FrameSize xxbit */
+    tz10xx_drv_spi->FrameSize(15);
+    /* Clock 1MHz */
+    tz10xx_drv_spi->BusSpeed(400000);
+
+    tz10xx_drv_spi->PowerControl(ARM_POWER_FULL);
+
+    /* MPU9250 reset & initial */
+    for (int i = 0; i < 100; i++) {
+        mpu9250_drv_read_byte(MPU9250_REG_WHO_AM_I, &val);
+        if (val == 0x71) {
+            break;
+        }
+        Usleep(100000);  /* 100ms */
+    }
+    if (val != 0x71) {
+        return false;
+    }
+
+    uint8_t init_conf[][2] = {
+        {MPU9250_REG_PWR_MGMT_1,    0x80},  /* reset */
+        {MPU9250_REG_PWR_MGMT_1,    0x40},  /* sleep */
+        {MPU9250_REG_PWR_MGMT_2,    0x3f},  /* Disable Accel & Gyro */
+        {0xff,                      0xff}
+    };
+    for (int i = 0; init_conf[i][0] != 0xff; i++) {
+        mpu9250_drv_write_byte(init_conf[i][0], init_conf[i][1]);
+        Usleep(1000);
+    }
+    return true;
+}
+
 /*
  * Initialize MPU9250 9axis sensor.
  * see: MPU-9250 Product Specification 7.5 SPI interface.
