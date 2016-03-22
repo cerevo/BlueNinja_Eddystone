@@ -87,7 +87,7 @@ const BLELib_Service *const hrgn_service_list[] = {
 };
 
 /*- INDICATION data -*/
-uint8_t bnmsg_advertising_data[] = {
+uint8_t eddystone_uid_advertising_data[] = {
     0x02, /* length of this data */
     0x01, /* AD type = Flags */
     0x06, /* LE General Discoverable Mode = 0x02 */
@@ -100,29 +100,67 @@ uint8_t bnmsg_advertising_data[] = {
     0xAA, /* Eddystone service FEAA */
     0xFE,
     
-#if 0
     0x17, /* length of this data */
     0x16, /* AD type = Service Data type value */
     0xAA, /* Eddystone service FEAA */
     0xFE,
     /* Eddystone-UID(https://github.com/google/eddystone/tree/master/eddystone-uid) */
-    0x00, /* Frame Type: UID */
-    0xE7, /* Ranging Data */
+    0x00,               /* Frame Type: UID */
+    0xE7,               /* Ranging Data */
     0x16, 0xF7, 0x42, 0xE6, 0xA8, 0x8C, 0x17, 0x5B, 0xA3, 0x22, /* Namespace:MSB 10Bytes of SHA1("blueninja.cerevo.com") */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x01, /* Instance */
-    0x00, /* Reserved */
-    0x00, /* Reserved */
-#else
+    0x00,               /* Reserved */
+    0x00,               /* Reserved */
+};
+
+uint8_t eddystone_url_advertising_data[] = {
+    0x02, /* length of this data */
+    0x01, /* AD type = Flags */
+    0x06, /* LE General Discoverable Mode = 0x02 */
+    /* BR/EDR Not Supported (i.e. bit 37
+     * of LMP Extended Feature bits Page 0) = 0x04 */
+
+    /* Eddystone(https://github.com/google/eddystone/blob/master/protocol-specification.md) */
+    0x03, /* length of this data */
+    0x03, /* AD type = Complete list of 16-bit UUIDs available */
+    0xAA, /* Eddystone service FEAA */
+    0xFE,
+    
     0x14, /* length of this data */
     0x16, /* AD type = Service Data type value */
     0xAA, /* Eddystone service FEAA */
     0xFE,
     /* Eddystone-URL(https://github.com/google/eddystone/tree/master/eddystone-url) */
-    0x10, /* Frame Type: URL */
-    0xE7, /* Ranging Data */
-    0x03, /* URL Scheme: https:// */
+    0x10,                   /* Frame Type: URL */
+    0xE7,                   /* Ranging Data */
+    0x03,                   /* URL Scheme: https:// */
     'b', 'n', 'i', 'n', 'j', 'a', '.', 'c', 'e', 'r', 'e', 'v', 'o', 0x07,
-#endif
+};
+
+uint8_t eddystone_tlm_advertising_data[] = {
+    0x02, /* length of this data */
+    0x01, /* AD type = Flags */
+    0x06, /* LE General Discoverable Mode = 0x02 */
+    /* BR/EDR Not Supported (i.e. bit 37
+     * of LMP Extended Feature bits Page 0) = 0x04 */
+
+    /* Eddystone(https://github.com/google/eddystone/blob/master/protocol-specification.md) */
+    0x03, /* length of this data */
+    0x03, /* AD type = Complete list of 16-bit UUIDs available */
+    0xAA, /* Eddystone service FEAA */
+    0xFE,
+    
+    0x11, /* length of this data */
+    0x16, /* AD type = Service Data type value */
+    0xAA, /* Eddystone service FEAA */
+    0xFE,
+    /* Eddystone-TLM(https://github.com/google/eddystone/tree/master/eddystone-tlm) */
+    0x20,                   /* Frame Type: TLM */
+    0x00,                   /* TLM Version */
+    0x72, 0x0B,             /* Battery voltage 2900[mV] */
+    0x00, 0x00,             /* Beacon Temperature */
+    0x00, 0x00, 0x00, 0x00, /* Advertising PDU count */
+    0x00, 0x00, 0x00, 0x00, /* Time since power-on or reboot */
 };
 
 uint8_t bnmsg_scan_resp_data[] = {
@@ -137,9 +175,11 @@ uint8_t bnmsg_scan_resp_data[] = {
     0x00, /* 0dB (-127...127 = 0x81...0x7F) */
 };
 
+static uint32_t sec_since_boot = 0;
 static void periodic_callback(RTC_EVENT e)
 {
     /* RTC割り込みハンドラ */
+    sec_since_boot++;
 }
 
 static tz1em_t tz1em_eddystone;
@@ -209,15 +249,17 @@ static bool is_adv = false;
 static bool is_reg = false;
 static uint8_t led_blink = 0;
 static uint8_t cnt = 0;
-extern twicConnIface_t* BLELib_Internal_ConnIface(void);
 
-int BLE_main(void)
+int BLE_main(bool detected_low_voltage)
 {
     int ret, res = 0;
     BLELib_State state;
     bool has_event;
     uint32_t pin;
 
+    static bool prev_detected_lv = false;
+    static uint32_t sec_detect_lv = 0;
+    
     if (tz1emParticipateIn(&tz1em_eddystone) != TZ1EM_STATUS_OK) {
         return -1;
     }
@@ -250,25 +292,45 @@ int BLE_main(void)
         case BLELIB_STATE_READY:
             if (is_adv == false) {
                 TZ01_console_puts("BLELIB_STATE_READY\r\n");
-                ret = BLELib_startAdvertising(bnmsg_advertising_data, sizeof(bnmsg_advertising_data), bnmsg_scan_resp_data, sizeof(bnmsg_scan_resp_data));
+                if (detected_low_voltage == false) {
+                    /* 通常(Eddystone UID or URLを通知) */
+                    ret = BLELib_startAdvertising(eddystone_uid_advertising_data, sizeof(eddystone_uid_advertising_data), bnmsg_scan_resp_data, sizeof(bnmsg_scan_resp_data));
+                } else {
+                    /* 電圧低下検出(Eddystone TLMを通知) */
+                    eddystone_tlm_advertising_data[21] = (uint8_t)(sec_since_boot         & 0xff);  //起動からの経過時間(秒)を設定
+                    eddystone_tlm_advertising_data[22] = (uint8_t)((sec_since_boot >>  8) & 0xff);
+                    eddystone_tlm_advertising_data[23] = (uint8_t)((sec_since_boot >> 16) & 0xff);
+                    eddystone_tlm_advertising_data[24] = (uint8_t)((sec_since_boot >> 24) & 0xff);
+                    ret = BLELib_startAdvertising(eddystone_tlm_advertising_data, sizeof(eddystone_tlm_advertising_data), bnmsg_scan_resp_data, sizeof(bnmsg_scan_resp_data));
+                }
                 if (ret == BLELIB_OK) {
                     is_adv = true;
                     cnt = 0;
-                }
-                
-                if (twicIfLeCeLowPowerMode(BLELib_Internal_ConnIface(), true, true, false, false) != TWIC_STATUS_OK) {
-                    TZ01_console_puts("twicIfLeCeLowPowerMode() failed.\r\n");
                 }
             }
             break;
         case BLELIB_STATE_ADVERTISING:
             is_adv = false;
+            if (prev_detected_lv != detected_low_voltage) {
+                /* 電圧検出状態が変化した */
+                BLELib_stopAdvertising();
+                sec_detect_lv = sec_since_boot;
+            }
+            prev_detected_lv = detected_low_voltage;
+            if (detected_low_voltage == true) {
+                /* 電圧低下検出から10秒経った */
+                if ((int32_t)((sec_detect_lv + 10) - sec_since_boot) < 0) {
+                    BLELib_stopAdvertising();
+                    return -1;  // main.cで実行を停止させる
+                }
+            }
             break;
         default:
             break;
     }
     
     if (has_event) {
+        /* イベントを実行 */
         ret = BLELib_run();
         if (ret != BLELIB_OK) {
             res = -1;
@@ -276,9 +338,10 @@ int BLE_main(void)
             TZ01_console_puts(msg);
         }
     } else {
+        /* 実行するイベントが無い */
         while (!Driver_UART1.TxDone());
         Driver_GPIO.WritePin(11, 0);
-        tz1emGoIntoTheShade(&tz1em_eddystone, true);
+        tz1emGoIntoTheShade(&tz1em_eddystone, true);    //省電力モードへ
         Driver_GPIO.WritePin(11, 1);
         Driver_PMU.SelectClockSource(PMU_CSM_UART1, PMU_CLOCK_SOURCE_OSC12M);
         Driver_PMU.SetPrescaler(PMU_CD_UART1, 3);
