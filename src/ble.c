@@ -22,6 +22,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#define  EDDYSTONE_UID
+//#define  EDDYSTONE_URL
+
 #include <stdio.h>
 #include "TZ10xx.h"
 #include "PMU_TZ10xx.h"
@@ -294,7 +297,13 @@ int BLE_main(bool detected_low_voltage)
                 TZ01_console_puts("BLELIB_STATE_READY\r\n");
                 if (detected_low_voltage == false) {
                     /* 通常(Eddystone UID or URLを通知) */
+#if   defined(EDDYSTONE_UID)
                     ret = BLELib_startAdvertising(eddystone_uid_advertising_data, sizeof(eddystone_uid_advertising_data), bnmsg_scan_resp_data, sizeof(bnmsg_scan_resp_data));
+#elif defined(EDDYSTONE_URL)
+                    ret = BLELib_startAdvertising(eddystone_url_advertising_data, sizeof(eddystone_url_advertising_data), bnmsg_scan_resp_data, sizeof(bnmsg_scan_resp_data));
+#else
+#error Please select beacon type.
+#endif
                 } else {
                     /* 電圧低下検出(Eddystone TLMを通知) */
                     eddystone_tlm_advertising_data[21] = (uint8_t)(sec_since_boot         & 0xff);  //起動からの経過時間(秒)を設定
